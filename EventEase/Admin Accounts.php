@@ -1,10 +1,27 @@
 <?php
+
+session_start();  // Start session to access the logged-in user
+
+// Check if the user is logged in, if not redirect to the login page
+if (!isset($_SESSION['user'])) {
+    header("Location: Login-Signup.php");
+    exit;
+}
+
+// Logout logic
+if (isset($_GET['logout']) && $_GET['logout'] == 'true') {
+    session_destroy();  // Destroy the session when logout is triggered
+    header("Location: Login-Signup.php");  // Redirect to login page
+    exit;
+}
 // Include your database connection file
 include('db.php');
 
 // Fetch accounts from the "accounts" table
 $query = "SELECT * FROM accounts";
-$result = mysqli_query($conn, $query);
+$stmt = $db->prepare($query);
+$stmt->execute();
+$result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 ?>
 
@@ -70,7 +87,6 @@ $result = mysqli_query($conn, $query);
             margin-bottom: 5px;
             border-radius: 6px;
             transition: all 0.3s ease-in-out;
-    
         }
         .sidebar a i {
             margin-right: 10px;
@@ -121,16 +137,15 @@ $result = mysqli_query($conn, $query);
             background-color: #d6e9f9;
         }
         .sidebar a:hover {
-    background-color: #007bff; /* Blue background on hover */
-    color: white; /* White text color */
-    transform: translateX(1px); /* Moves the link slightly to the right */
-    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3); /* Adds a shadow for emphasis */
-  
-}
+            background-color: #007bff; /* Blue background on hover */
+            color: white; /* White text color */
+            transform: translateX(1px); /* Moves the link slightly to the right */
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3); /* Adds a shadow for emphasis */
+        }
 
-.sidebar a i {
-    margin-right: 20px;
-}
+        .sidebar a i {
+            margin-right: 20px;
+        }
 
     </style>
 </head>
@@ -146,8 +161,10 @@ $result = mysqli_query($conn, $query);
     </div>
     
     <div class="topnav">
-        <h4>Welcome, Admin!</h4>
-        <i class="fa fa-sign-out logout-icon" onclick="location.href='#'"></i>
+        <h4>Welcome, <?php echo $_SESSION['user']['name']; ?>!</h4> <!-- Displaying user's name -->
+        <a href="?logout=true">
+            <i class="fa fa-sign-out logout-icon"></i>
+        </a>
     </div>
 
     <main class="content">
@@ -165,15 +182,15 @@ $result = mysqli_query($conn, $query);
                     </thead>
                     <tbody>
                         <?php
-                        if (mysqli_num_rows($result) > 0) {
-                            while ($row = mysqli_fetch_assoc($result)) {
+                        if (!empty($result)) {
+                            foreach ($result as $row) {
                                 echo "<tr>";
-                                echo "<td>" . $row['fullname'] . "</td>";
-                                echo "<td>" . $row['email'] . "</td>";
-                                echo "<td>" . $row['contactnumber'] . "</td>";
+                                echo "<td>" . htmlspecialchars($row['fullname']) . "</td>";
+                                echo "<td>" . htmlspecialchars($row['email']) . "</td>";
+                                echo "<td>" . htmlspecialchars($row['contactnumber']) . "</td>";
                                 echo "<td>
-                                        <a href='edit_account.php?id=" . $row['id'] . "' class='btn btn-warning btn-sm'>Edit</a>
-                                        <a href='delete_account.php?id=" . $row['id'] . "' class='btn btn-danger btn-sm'>Delete</a>
+                                        <button class='btn btn-warning btn-sm' onclick='showEditModal(" . htmlspecialchars(json_encode($row)) . ")'>Edit</button>
+                                        <button class='btn btn-danger btn-sm' onclick='showDeleteModal(" . htmlspecialchars($row['id']) . ")'>Delete</button>
                                       </td>";
                                 echo "</tr>";
                             }
@@ -187,12 +204,82 @@ $result = mysqli_query($conn, $query);
         </div>
     </main>
 
+    <!-- Edit Modal -->
+    <div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editModalLabel">Edit Account</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form id="editForm" method="POST" action="edit-account-action.php">
+                    <div class="modal-body">
+                        <input type="hidden" name="id" id="editAccountId">
+                        <div class="form-group">
+                            <label for="editFullName">Full Name</label>
+                            <input type="text" class="form-control" id="editFullName" name="fullname" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editEmail">Email</label>
+                            <input type="email" class="form-control" id="editEmail" name="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editContactNumber">Contact Number</label>
+                            <input type="text" class="form-control" id="editContactNumber" name="contactnumber" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel">Delete Account</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form id="deleteForm" method="POST" action="delete-account-action.php">
+                    <div class="modal-body">
+                        <input type="hidden" name="id" id="deleteAccountId">
+                        <p>Are you sure you want to delete this account?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- JavaScript -->
-    <script src="https://kit.fontawesome.com/a076d05399.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        function showEditModal(account) {
+            document.getElementById("editAccountId").value = account.id;
+            document.getElementById("editFullName").value = account.fullname;
+            document.getElementById("editEmail").value = account.email;
+            document.getElementById("editContactNumber").value = account.contactnumber;
+            $('#editModal').modal('show');
+        }
+
+        function showDeleteModal(accountId) {
+            document.getElementById("deleteAccountId").value = accountId;
+            $('#deleteModal').modal('show');
+        }
+    </script>
 </body>
 </html>
-
-<?php
-// Close the database connection
-mysqli_close($conn);
-?>

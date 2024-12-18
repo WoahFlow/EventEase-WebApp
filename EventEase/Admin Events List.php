@@ -179,17 +179,85 @@ if (isset($_GET['logout']) && $_GET['logout'] == 'true') {
 
                     if ($result->num_rows > 0) {
                         while ($row = $result->fetch_assoc()) {
-                            echo "<tr>
-                                <td>{$row['eventname']}</td>
-                                <td>{$row['eventdateandtime']}</td>
-                                <td>P{$row['eventprice']}</td>
-                                <td>{$row['eventstatus']}</td>
+                            ?>
+                            <tr>
+                                <td><?php echo $row['eventname']; ?></td>
+                                <td><?php echo $row['eventdateandtime']; ?></td>
+                                <td>P<?php echo $row['eventprice']; ?></td>
+                                <td><?php echo $row['eventstatus']; ?></td>
                                 <td>
-                                    <button class='btn btn-sm btn-warning'>Edit</button>
-                                    <button class='btn btn-sm btn-danger'>Delete</button>
+                                    <button class="btn btn-sm btn-warning" data-toggle="modal" data-target="#editModal<?php echo $row['id']; ?>">Edit</button>
+                                    <button class="btn btn-sm btn-danger" data-toggle="modal" data-target="#deleteModal<?php echo $row['id']; ?>">Delete</button>
                                 </td>
-                                <td>{$row['eventchangedby']}</td>
-                            </tr>";
+                                <td><?php echo $row['eventchangedby']; ?></td>
+                            </tr>
+
+                            <!-- Edit Modal -->
+                            <div class="modal fade" id="editModal<?php echo $row['id']; ?>" tabindex="-1" role="dialog" aria-labelledby="editModalLabel<?php echo $row['id']; ?>" aria-hidden="true">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <form method="POST" action="edit-event.php">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="editModalLabel<?php echo $row['id']; ?>">Edit Event</h5>
+                                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                    <span aria-hidden="true">&times;</span>
+                                                </button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <input type="hidden" name="eventId" value="<?php echo $row['id']; ?>">
+                                                <div class="form-group">
+                                                    <label for="eventName<?php echo $row['id']; ?>">Event Name:</label>
+                                                    <input type="text" class="form-control" id="eventName<?php echo $row['id']; ?>" name="eventName" value="<?php echo $row['eventname']; ?>" required>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="eventDate<?php echo $row['id']; ?>">Date and Time:</label>
+                                                    <input type="datetime-local" class="form-control" id="eventDate<?php echo $row['id']; ?>" name="eventDate" value="<?php echo date('Y-m-d\TH:i', strtotime($row['eventdateandtime'])); ?>" required>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="eventAmount<?php echo $row['id']; ?>">Amount/Price:</label>
+                                                    <input type="number" class="form-control" id="eventAmount<?php echo $row['id']; ?>" name="eventAmount" value="<?php echo $row['eventprice']; ?>" required>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="eventStatus<?php echo $row['id']; ?>">Status:</label>
+                                                    <select class="form-control" id="eventStatus<?php echo $row['id']; ?>" name="eventStatus">
+                                                        <option value="Active" <?php if ($row['eventstatus'] == 'Active') echo 'selected'; ?>>Active</option>
+                                                        <option value="Inactive" <?php if ($row['eventstatus'] == 'Inactive') echo 'selected'; ?>>Inactive</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Delete Modal -->
+                            <div class="modal fade" id="deleteModal<?php echo $row['id']; ?>" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel<?php echo $row['id']; ?>" aria-hidden="true">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <form method="POST" action="delete-event.php">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="deleteModalLabel<?php echo $row['id']; ?>">Delete Event</h5>
+                                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                    <span aria-hidden="true">&times;</span>
+                                                </button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p>Are you sure you want to delete the event <strong><?php echo $row['eventname']; ?></strong>?</p>
+                                                <input type="hidden" name="eventId" value="<?php echo $row['id']; ?>">
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-danger">Delete</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            <?php
                         }
                     } else {
                         echo "<tr><td colspan='6'>No events found.</td></tr>";
